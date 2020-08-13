@@ -5,6 +5,8 @@ import (
 )
 
 type Agent interface {
+	// 设置序号
+	SetLastSeq(val int)
 	WriteMsg(msg interface{})
 	LocalAddr() net.Addr
 	RemoteAddr() net.Addr

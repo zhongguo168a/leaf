@@ -1,12 +1,16 @@
 package gate
 
 import (
-	"github.com/name5566/leaf/chanrpc"
-	"github.com/name5566/leaf/log"
-	"github.com/name5566/leaf/network"
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"github.com/zhongguo168a/leaf/chanrpc"
+	"github.com/zhongguo168a/leaf/log"
+	"github.com/zhongguo168a/leaf/network"
 	"net"
 	"reflect"
 	"time"
+	"zhongguo168a.top/mycodes/gocodes/utils/binaryutil"
 )
 
 type Gate struct {
@@ -87,6 +91,7 @@ type agent struct {
 	conn     network.Conn
 	gate     *Gate
 	userData interface{}
+	lastSeq  int
 }
 
 func (a *agent) Run() {
@@ -97,13 +102,28 @@ func (a *agent) Run() {
 			break
 		}
 
+		if len(data) < 4 {
+			log.Debug("read message: invalid bytes")
+			break
+		}
+
+		reader := bytes.NewReader(data)
+		seq := int(binaryutil.ReadInt32(reader, binary.BigEndian))
+		msgId := binaryutil.ReadUTF(reader, binary.BigEndian)
+		msgString := binaryutil.ReadUTF(reader, binary.BigEndian)
+		fmt.Printf("seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
+
 		if a.gate.Processor != nil {
-			msg, err := a.gate.Processor.Unmarshal(data)
+			msg, err := a.gate.Processor.Unmarshal(msgId, []byte(msgString))
 			if err != nil {
 				log.Debug("unmarshal message error: %v", err)
 				break
 			}
-			err = a.gate.Processor.Route(msg, a)
+			err = a.gate.Processor.Route(map[string]interface{}{
+				"msgId": msgId,
+				"data":  msg,
+				"seq":   seq,
+			}, a)
 			if err != nil {
 				log.Debug("route message error: %v", err)
 				break
@@ -121,14 +141,22 @@ func (a *agent) OnClose() {
 	}
 }
 
+func (a *agent) SetLastSeq(val int) {
+	a.lastSeq = val
+}
+
 func (a *agent) WriteMsg(msg interface{}) {
 	if a.gate.Processor != nil {
-		data, err := a.gate.Processor.Marshal(msg)
+		msgId, data, err := a.gate.Processor.Marshal(msg)
 		if err != nil {
 			log.Error("marshal message %v error: %v", reflect.TypeOf(msg), err)
 			return
 		}
-		err = a.conn.WriteMsg(data...)
+		buff := bytes.NewBuffer([]byte{})
+		binary.Write(buff, binary.BigEndian, int32(a.lastSeq))
+		binaryutil.WriteUTF(buff, binary.BigEndian, msgId)
+		binaryutil.WriteUTF(buff, binary.BigEndian, string(data))
+		err = a.conn.WriteMsg(buff.Bytes())
 		if err != nil {
 			log.Error("write message %v error: %v", reflect.TypeOf(msg), err)
 		}

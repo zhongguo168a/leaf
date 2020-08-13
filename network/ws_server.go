@@ -3,7 +3,7 @@ package network
 import (
 	"crypto/tls"
 	"github.com/gorilla/websocket"
-	"github.com/name5566/leaf/log"
+	"github.com/zhongguo168a/leaf/log"
 	"net"
 	"net/http"
 	"sync"
@@ -39,6 +39,7 @@ func (handler *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
+	handler.upgrader.EnableCompression = true
 	conn, err := handler.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Debug("upgrade error: %v", err)
