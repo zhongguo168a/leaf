@@ -146,20 +146,13 @@ func (a *agent) SetLastSeq(val int) {
 }
 
 func (a *agent) WriteMsg(msg interface{}) {
-	if a.gate.Processor != nil {
-		msgId, data, err := a.gate.Processor.Marshal(msg)
-		if err != nil {
-			log.Error("marshal message %v error: %v", reflect.TypeOf(msg), err)
-			return
-		}
-		buff := bytes.NewBuffer([]byte{})
-		binary.Write(buff, binary.BigEndian, int32(a.lastSeq))
-		binaryutil.WriteUTF(buff, binary.BigEndian, msgId)
-		binaryutil.WriteUTF(buff, binary.BigEndian, string(data))
-		err = a.conn.WriteMsg(buff.Bytes())
-		if err != nil {
-			log.Error("write message %v error: %v", reflect.TypeOf(msg), err)
-		}
+
+	buff := bytes.NewBuffer([]byte{})
+	binary.Write(buff, binary.BigEndian, int32(a.lastSeq))
+	binaryutil.WriteBytes(buff, binary.BigEndian, msg.([]byte))
+	err := a.conn.WriteMsg(buff.Bytes())
+	if err != nil {
+		log.Error("write message %v error: %v", reflect.TypeOf(msg), err)
 	}
 }
 
