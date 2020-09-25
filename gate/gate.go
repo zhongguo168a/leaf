@@ -108,7 +108,7 @@ func (a *agent) Run() {
 		}
 
 		reader := bytes.NewReader(data)
-		seq := int(binaryutil.ReadInt32(reader, binary.BigEndian))
+		seq := int(binaryutil.ReadInt16(reader, binary.BigEndian))
 		msgId := binaryutil.ReadUTF(reader, binary.BigEndian)
 		msgString := binaryutil.ReadUTF(reader, binary.BigEndian)
 		fmt.Printf("seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
@@ -126,6 +126,12 @@ func (a *agent) Run() {
 			}, a)
 			if err != nil {
 				log.Debug("route message error: %v", err)
+				wb := &bytes.Buffer{}
+				binary.Write(wb, binary.BigEndian, int16(0))
+				binary.Write(wb, binary.BigEndian, int16(1))
+				binary.Write(wb, binary.BigEndian, int16(0))
+				binary.Write(wb, binary.BigEndian, int16(-1))
+				a.WriteMsg(wb.Bytes())
 				break
 			}
 		}
