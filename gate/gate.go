@@ -163,7 +163,7 @@ func (a *agent) NextSeq() int16 {
 func (a *agent) WriteMsg(msg interface{}) {
 
 	buff := bytes.NewBuffer([]byte{})
-	binary.Write(buff, binary.BigEndian, int32(a.lastSeq))
+	binary.Write(buff, binary.BigEndian, int16(a.lastSeq))
 	binaryutil.WriteBytes(buff, binary.BigEndian, msg.([]byte))
 	err := a.conn.WriteMsg(buff.Bytes())
 	if err != nil {
