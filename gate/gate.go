@@ -9,7 +9,6 @@ import (
 	"github.com/zhongguo168a/leaf/network"
 	"net"
 	"reflect"
-	"sync/atomic"
 	"time"
 	"zhongguo168a.top/mycodes/gocodes/utils/binaryutil"
 )
@@ -93,9 +92,9 @@ type agent struct {
 	gate     *Gate
 	userData interface{}
 	// 来自客户端
-	lastSeq int
+	lastSeq int16
 	// agent自身, 协议派发到客户端的序列号, 用于调试
-	seqSend int64
+	seqSend int16
 }
 
 func (a *agent) Run() {
@@ -151,19 +150,16 @@ func (a *agent) OnClose() {
 	}
 }
 
-func (a *agent) SetLastSeq(val int) {
+func (a *agent) SetLastSeq(val int16) {
 	a.lastSeq = val
 }
 
-func (a *agent) NextSeq() int16 {
-	atomic.AddInt64(&a.seqSend, 1)
-	return int16(a.seqSend)
-}
-
 func (a *agent) WriteMsg(msg interface{}) {
+	a.seqSend++
 
 	buff := bytes.NewBuffer([]byte{})
 	binary.Write(buff, binary.BigEndian, int16(a.lastSeq))
+	binary.Write(buff, binary.BigEndian, int16(a.seqSend))
 	binaryutil.WriteBytes(buff, binary.BigEndian, msg.([]byte))
 	err := a.conn.WriteMsg(buff.Bytes())
 	if err != nil {
