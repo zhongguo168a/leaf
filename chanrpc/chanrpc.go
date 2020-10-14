@@ -174,6 +174,8 @@ func (s *Server) Close() {
 			err: errors.New("chanrpc server closed"),
 		})
 	}
+	
+	s.functions = nil
 }
 
 // goroutine safe
