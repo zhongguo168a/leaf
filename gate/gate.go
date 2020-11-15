@@ -92,7 +92,7 @@ type agent struct {
 	gate     *Gate
 	userData interface{}
 	// 来自客户端
-	lastSeq int16
+	lastSeq int
 	// agent自身, 协议派发到客户端的序列号, 用于调试
 	seqSend int16
 }
@@ -150,7 +150,7 @@ func (a *agent) OnClose() {
 	}
 }
 
-func (a *agent) SetLastSeq(val int16) {
+func (a *agent) SetLastSeq(val int) {
 	a.lastSeq = val
 }
 
