@@ -3,6 +3,7 @@ package gate
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"github.com/zhongguo168a/leaf/chanrpc"
 	"github.com/zhongguo168a/leaf/log"
 	"github.com/zhongguo168a/leaf/network"
@@ -113,7 +114,7 @@ func (a *agent) Run() {
 		seq := int(binaryutil.ReadInt16(reader, binary.BigEndian))
 		msgId := binaryutil.ReadUTF(reader, binary.BigEndian)
 		msgString := binaryutil.ReadUTF(reader, binary.BigEndian)
-		//fmt.Printf("<<< seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
+		fmt.Printf("<<< seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
 
 		if a.gate.Processor != nil {
 			msg, err := a.gate.Processor.Unmarshal(msgId, []byte(msgString))
