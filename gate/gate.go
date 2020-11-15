@@ -160,7 +160,7 @@ func (a *agent) WriteMsg(msg interface{}) {
 	buff := bytes.NewBuffer([]byte{})
 	binary.Write(buff, binary.BigEndian, int16(a.lastSeq))
 	binary.Write(buff, binary.BigEndian, int16(a.seqSend))
-	binaryutil.WriteBytes(buff, binary.BigEndian, msg.([]byte))
+	binary.Write(buff, binary.BigEndian,  msg.([]byte))
 	err := a.conn.WriteMsg(buff.Bytes())
 	if err != nil {
 		log.Error("write message %v error: %v", reflect.TypeOf(msg), err)
