@@ -34,7 +34,7 @@ func New(l int) *Go {
 
 func (g *Go) Go(f func(), cb func()) {
 	g.pendingGo++
-
+	
 	go func() {
 		defer func() {
 			g.ChanCb <- cb
@@ -48,7 +48,7 @@ func (g *Go) Go(f func(), cb func()) {
 				}
 			}
 		}()
-
+		
 		f()
 	}()
 }
@@ -66,7 +66,7 @@ func (g *Go) Cb(cb func()) {
 			}
 		}
 	}()
-
+	
 	if cb != nil {
 		cb()
 	}
@@ -91,19 +91,19 @@ func (g *Go) NewLinearContext() *LinearContext {
 
 func (c *LinearContext) Go(f func(), cb func()) {
 	c.g.pendingGo++
-
+	
 	c.mutexLinearGo.Lock()
 	c.linearGo.PushBack(&LinearGo{f: f, cb: cb})
 	c.mutexLinearGo.Unlock()
-
+	
 	go func() {
 		c.mutexExecution.Lock()
 		defer c.mutexExecution.Unlock()
-
+		
 		c.mutexLinearGo.Lock()
 		e := c.linearGo.Remove(c.linearGo.Front()).(*LinearGo)
 		c.mutexLinearGo.Unlock()
-
+		
 		defer func() {
 			c.g.ChanCb <- e.cb
 			if r := recover(); r != nil {
@@ -116,7 +116,7 @@ func (c *LinearContext) Go(f func(), cb func()) {
 				}
 			}
 		}()
-
+		
 		e.f()
 	}()
 }
