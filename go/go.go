@@ -10,18 +10,13 @@ import (
 
 // one Go per goroutine (goroutine not safe)
 type Go struct {
-	ChanCb    chan CbContext
+	ChanCb    chan func()
 	pendingGo int
 }
 
 type LinearGo struct {
 	f  func()
-	cb CbContext
-}
-
-type CbContext struct {
-	f    func(ret interface{})
-	args interface{}
+	cb func()
 }
 
 type LinearContext struct {
@@ -33,18 +28,16 @@ type LinearContext struct {
 
 func New(l int) *Go {
 	g := new(Go)
-	g.ChanCb = make(chan CbContext, l)
+	g.ChanCb = make(chan func(), l)
 	return g
 }
 
-func (g *Go) Go(f func() interface{}, cb func(ret interface{})) {
+func (g *Go) Go(f func(), cb func()) {
 	g.pendingGo++
-	
+
 	go func() {
-		var ret CbContext
-		ret.f = cb
 		defer func() {
-			g.ChanCb <- ret
+			g.ChanCb <- cb
 			if r := recover(); r != nil {
 				if conf.LenStackBuf > 0 {
 					buf := make([]byte, conf.LenStackBuf)
@@ -55,12 +48,12 @@ func (g *Go) Go(f func() interface{}, cb func(ret interface{})) {
 				}
 			}
 		}()
-		
-		ret.args = f()
+
+		f()
 	}()
 }
 
-func (g *Go) Cb(ret CbContext) {
+func (g *Go) Cb(cb func()) {
 	defer func() {
 		g.pendingGo--
 		if r := recover(); r != nil {
@@ -73,8 +66,10 @@ func (g *Go) Cb(ret CbContext) {
 			}
 		}
 	}()
-	
-	ret.f(ret.args)
+
+	if cb != nil {
+		cb()
+	}
 }
 
 func (g *Go) Close() {
@@ -94,21 +89,21 @@ func (g *Go) NewLinearContext() *LinearContext {
 	return c
 }
 
-func (c *LinearContext) Go(f func(), cb CbContext) {
+func (c *LinearContext) Go(f func(), cb func()) {
 	c.g.pendingGo++
-	
+
 	c.mutexLinearGo.Lock()
 	c.linearGo.PushBack(&LinearGo{f: f, cb: cb})
 	c.mutexLinearGo.Unlock()
-	
+
 	go func() {
 		c.mutexExecution.Lock()
 		defer c.mutexExecution.Unlock()
-		
+
 		c.mutexLinearGo.Lock()
 		e := c.linearGo.Remove(c.linearGo.Front()).(*LinearGo)
 		c.mutexLinearGo.Unlock()
-		
+
 		defer func() {
 			c.g.ChanCb <- e.cb
 			if r := recover(); r != nil {
@@ -121,7 +116,7 @@ func (c *LinearContext) Go(f func(), cb CbContext) {
 				}
 			}
 		}()
-		
+
 		e.f()
 	}()
 }
