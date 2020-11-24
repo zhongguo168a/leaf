@@ -2,6 +2,7 @@ package gate
 
 import (
 	"net"
+	"zhongguo168a.top/mycodes/gocodes/ezcache"
 )
 
 type Agent interface {
@@ -12,6 +13,7 @@ type Agent interface {
 	RemoteAddr() net.Addr
 	Close()
 	Destroy()
+	Cache() *ezcache.Cache
 	UserData() interface{}
 	SetUserData(data interface{})
 }

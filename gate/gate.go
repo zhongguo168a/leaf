@@ -10,6 +10,7 @@ import (
 	"net"
 	"reflect"
 	"time"
+	"zhongguo168a.top/mycodes/gocodes/ezcache"
 	"zhongguo168a.top/mycodes/gocodes/utils/binaryutil"
 )
 
@@ -19,13 +20,13 @@ type Gate struct {
 	MaxMsgLen       uint32
 	Processor       network.Processor
 	AgentChanRPC    *chanrpc.Server
-
+	
 	// websocket
 	WSAddr      string
 	HTTPTimeout time.Duration
 	CertFile    string
 	KeyFile     string
-
+	
 	// tcp
 	TCPAddr      string
 	LenMsgLen    int
@@ -51,7 +52,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 			return a
 		}
 	}
-
+	
 	var tcpServer *network.TCPServer
 	if gate.TCPAddr != "" {
 		tcpServer = new(network.TCPServer)
@@ -69,7 +70,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 			return a
 		}
 	}
-
+	
 	if wsServer != nil {
 		wsServer.Start()
 	}
@@ -95,27 +96,30 @@ type agent struct {
 	lastSeq int
 	// agent自身, 协议派发到客户端的序列号, 用于调试
 	seqSend int16
+	//
+	cache *ezcache.Cache
 }
 
 func (a *agent) Run() {
+	a.cache = &ezcache.Cache{}
 	for {
 		data, err := a.conn.ReadMsg()
 		if err != nil {
 			log.Debug("read message: %v", err)
 			break
 		}
-
+		
 		if len(data) < 4 {
 			log.Debug("read message: invalid bytes")
 			break
 		}
-
+		
 		reader := bytes.NewReader(data)
 		seq := int(binaryutil.ReadInt16(reader, binary.BigEndian))
 		msgId := binaryutil.ReadUTF(reader, binary.BigEndian)
 		msgString := binaryutil.ReadUTF(reader, binary.BigEndian)
 		fmt.Printf("<<< seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
-
+		
 		if a.gate.Processor != nil {
 			msg, err := a.gate.Processor.Unmarshal(msgId, []byte(msgString))
 			if err != nil {
@@ -156,11 +160,11 @@ func (a *agent) SetLastSeq(val int) {
 
 func (a *agent) WriteMsg(msg interface{}) {
 	a.seqSend++
-
+	
 	buff := bytes.NewBuffer([]byte{})
 	binary.Write(buff, binary.BigEndian, int16(a.lastSeq))
 	binary.Write(buff, binary.BigEndian, int16(a.seqSend))
-	binary.Write(buff, binary.BigEndian,  msg.([]byte))
+	binary.Write(buff, binary.BigEndian, msg.([]byte))
 	err := a.conn.WriteMsg(buff.Bytes())
 	if err != nil {
 		log.Error("write message %v error: %v", reflect.TypeOf(msg), err)
@@ -181,6 +185,10 @@ func (a *agent) Close() {
 
 func (a *agent) Destroy() {
 	a.conn.Destroy()
+}
+
+func (a *agent) Cache() *ezcache.Cache {
+	return a.cache
 }
 
 func (a *agent) UserData() interface{} {
