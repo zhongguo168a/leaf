@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/zhongguo168a/leaf/chanrpc"
-	"github.com/zhongguo168a/leaf/log"
 	"github.com/zhongguo168a/leaf/network"
 	"net"
 	"reflect"
 	"time"
 	"zhongguo168a.top/mycodes/gocodes/ezcache"
+	"zhongguo168a.top/mycodes/gocodes/mylog"
 	"zhongguo168a.top/mycodes/gocodes/utils/binaryutil"
 )
 
@@ -104,12 +104,12 @@ func (a *agent) Run() {
 	for {
 		data, err := a.conn.ReadMsg()
 		if err != nil {
-			log.Debug("read message: %v", err)
+			mylog.Debug("read message: %v", err)
 			break
 		}
 		
 		if len(data) < 4 {
-			log.Debug("read message: invalid bytes")
+			mylog.Debug("read message: invalid bytes")
 			break
 		}
 		
@@ -117,12 +117,12 @@ func (a *agent) Run() {
 		seq := int(binaryutil.ReadInt16(reader, binary.BigEndian))
 		msgId := binaryutil.ReadUTF(reader, binary.BigEndian)
 		msgString := binaryutil.ReadUTF(reader, binary.BigEndian)
-		//fmt.Printf("<<< seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
+		mylog.Debug("<<< seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
 		
 		if a.gate.Processor != nil {
 			msg, err := a.gate.Processor.Unmarshal(msgId, []byte(msgString))
 			if err != nil {
-				log.Debug("unmarshal message error: %v", err)
+				mylog.Debug("unmarshal message error: %v", err)
 				break
 			}
 			err = a.gate.Processor.Route(map[string]interface{}{
@@ -131,7 +131,7 @@ func (a *agent) Run() {
 				"seq":   seq,
 			}, a)
 			if err != nil {
-				log.Debug("route message error: %v", err)
+				mylog.Debug("route message error: %v", err)
 				wb := &bytes.Buffer{}
 				binary.Write(wb, binary.BigEndian, int16(0))
 				binary.Write(wb, binary.BigEndian, int16(1))
@@ -148,7 +148,7 @@ func (a *agent) OnClose() {
 	if a.gate.AgentChanRPC != nil {
 		err := a.gate.AgentChanRPC.Call0("CloseAgent", a)
 		if err != nil {
-			log.Error("chanrpc error: %v", err)
+			mylog.Error("chanrpc error: %v", err)
 		}
 	}
 }
@@ -166,7 +166,7 @@ func (a *agent) WriteMsg(msg interface{}) {
 	binary.Write(buff, binary.BigEndian, msg.([]byte))
 	err := a.conn.WriteMsg(buff.Bytes())
 	if err != nil {
-		log.Error("write message %v error: %v", reflect.TypeOf(msg), err)
+		mylog.Error("write message %v error: %v", reflect.TypeOf(msg), err)
 	}
 }
 
