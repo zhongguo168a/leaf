@@ -120,18 +120,19 @@ func (a *agent) Run() {
 		mylog.Debug("<<< seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
 		
 		if a.gate.Processor != nil {
-			msg, err := a.gate.Processor.Unmarshal(msgId, []byte(msgString))
-			if err != nil {
-				mylog.Debug("unmarshal message error: %v", err)
+			msg, perr := a.gate.Processor.Unmarshal(msgId, []byte(msgString))
+			if perr != nil {
+				mylog.Debug("unmarshal message error: %v", perr)
 				break
 			}
-			err = a.gate.Processor.Route(map[string]interface{}{
+			rerr := a.gate.Processor.Route(map[string]interface{}{
 				"msgId": msgId,
 				"data":  msg,
 				"seq":   seq,
 			}, a)
-			if err != nil {
-				mylog.Debug("route message error: %v", err)
+			if rerr != nil {
+				mylog.Debug("route message error: %v", rerr)
+				
 				wb := &bytes.Buffer{}
 				binary.Write(wb, binary.BigEndian, int16(0))
 				binary.Write(wb, binary.BigEndian, int16(1))
