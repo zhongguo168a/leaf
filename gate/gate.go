@@ -19,13 +19,13 @@ type Gate struct {
 	MaxMsgLen       uint32
 	Processor       network.Processor
 	AgentChanRPC    *chanrpc.Server
-	
+
 	// websocket
 	WSAddr      string
 	HTTPTimeout time.Duration
 	CertFile    string
 	KeyFile     string
-	
+
 	// tcp
 	TCPAddr      string
 	LenMsgLen    int
@@ -51,7 +51,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 			return a
 		}
 	}
-	
+
 	var tcpServer *network.TCPServer
 	if gate.TCPAddr != "" {
 		tcpServer = new(network.TCPServer)
@@ -69,7 +69,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 			return a
 		}
 	}
-	
+
 	if wsServer != nil {
 		wsServer.Start()
 	}
@@ -107,18 +107,18 @@ func (a *agent) Run() {
 			mylog.Debug("read message: %v", err)
 			break
 		}
-		
+
 		if len(data) < 4 {
 			mylog.Debug("read message: invalid bytes")
 			break
 		}
-		
+
 		reader := bytes.NewReader(data)
 		seq := int(binaryutil.ReadInt16(reader, binary.BigEndian))
 		msgId := binaryutil.ReadUTF(reader, binary.BigEndian)
 		msgString := binaryutil.ReadUTF(reader, binary.BigEndian)
 		mylog.Debug("<<< seq=%v, msg=%v, data=%v\n", seq, msgId, msgString)
-		
+
 		if a.gate.Processor != nil {
 			msg, perr := a.gate.Processor.Unmarshal(msgId, []byte(msgString))
 			if perr != nil {
@@ -132,13 +132,6 @@ func (a *agent) Run() {
 			}, a)
 			if rerr != nil {
 				mylog.Debug("route message error: %v", rerr)
-				
-				wb := &bytes.Buffer{}
-				binary.Write(wb, binary.BigEndian, int16(0))
-				binary.Write(wb, binary.BigEndian, int16(1))
-				binary.Write(wb, binary.BigEndian, int16(0))
-				binary.Write(wb, binary.BigEndian, int16(-1))
-				a.WriteMsg(wb.Bytes())
 				break
 			}
 		}
@@ -160,7 +153,7 @@ func (a *agent) SetLastSeq(val int) {
 
 func (a *agent) WriteMsg(msg interface{}) {
 	a.seqSend++
-	
+
 	buff := bytes.NewBuffer([]byte{})
 	binary.Write(buff, binary.BigEndian, int16(a.lastSeq))
 	binary.Write(buff, binary.BigEndian, int16(a.seqSend))
