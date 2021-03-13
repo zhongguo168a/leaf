@@ -100,7 +100,7 @@ type agent struct {
 }
 
 func (a *agent) Run() {
-	a.cache = &ezcache.Cache{}
+	a.cache = ezcache.NewCacheSyncNoExpire()
 	for {
 		data, err := a.conn.ReadMsg()
 		if err != nil {
